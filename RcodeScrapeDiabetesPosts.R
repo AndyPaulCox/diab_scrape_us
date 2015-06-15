@@ -56,36 +56,36 @@ L1_urls<-c(
 #"http://www.diabetesdaily.com/forum/announcements/",
 #"http://www.diabetesdaily.com/forum/diabetes-news/",
 
-  
+
 
 for(i in 1:length(L1_urls)){
-
-#retrieve the first forum
-mst<-html_session(L1_urls[i])
-#now extract to the first
-L2_urls<-mst%>% html_nodes('.title') %>% html_attr("href") 
-
-#now ascertain the last page for this forum
-last<-mst %>% html_nodes('#threadpagestats') %>% html_text() 
-
-last<-as.numeric(unlist(strsplit(last," "))[length(unlist(strsplit(last," ")))])
-#now we have the last page number simply add 'index[n]'
-#for(pg in 2:last){
-pg=2
-while(pg<=last){
-  url1<-paste0(L1_urls[i],"index",pg)
+  
   #retrieve the first forum
-  mst<-html_session(url1)
+  mst<-html_session(L1_urls[i])
   #now extract to the first
-  L2_temp<-mst%>% html_nodes('.title') %>% html_attr("href") 
-  L2_urls<-c(L2_urls,L2_temp) 
-  Sys.sleep(runif(1,0.5,1.2))
-  pg<-pg+length(L2_temp)
-}
-print(i/length(L1_urls))
-outpath<-paste0("C:\\Users\\Andrew.Cox\\Dropbox\\rdata\\diab_scrape_us\\results\\urls\\db_urls_",i,".csv")
-#write.table(L2_urls, file = "/Users/AndyC/Dropbox/rdata/diab_scrape_us/db_urls.csv", sep = ",", col.names = NA, na="NA", qmethod = "double")
-write.table(L2_urls, file = outpath, sep = ",", col.names = NA, na="NA", qmethod = "double")
+  L2_urls<-mst%>% html_nodes('.title') %>% html_attr("href") 
+  
+  #now ascertain the last page for this forum
+  last<-mst %>% html_nodes('#threadpagestats') %>% html_text() 
+  
+  last<-as.numeric(unlist(strsplit(last," "))[length(unlist(strsplit(last," ")))])
+  #now we have the last page number simply add 'index[n]'
+  #for(pg in 2:last){
+  pg=2
+  while(pg<=last){
+    url1<-paste0(L1_urls[i],"index",pg)
+    #retrieve the first forum
+    mst<-html_session(url1)
+    #now extract to the first
+    L2_temp<-mst%>% html_nodes('.title') %>% html_attr("href") 
+    L2_urls<-c(L2_urls,L2_temp) 
+    Sys.sleep(runif(1,0.5,1.2))
+    pg<-pg+length(L2_temp)
+  }
+  print(i/length(L1_urls))
+  outpath<-paste0("C:\\Users\\Andrew.Cox\\Dropbox\\rdata\\diab_scrape_us\\results\\urls\\db_urls_",i,".csv")
+  #write.table(L2_urls, file = "/Users/AndyC/Dropbox/rdata/diab_scrape_us/db_urls.csv", sep = ",", col.names = NA, na="NA", qmethod = "double")
+  write.table(L2_urls, file = outpath, sep = ",", col.names = NA, na="NA", qmethod = "double")
 }
 
 
@@ -97,133 +97,131 @@ rm(list = ls())
 library(rvest)
 library(pipeR)
 
-for(i in 1:41){
-#filepath<-paste0("C:\\Users\\Andrew.Cox\\Dropbox\\rdata\\diab_scrape_us\\results\\urls\\db_urls_",i,".csv")
-filepath<-paste0("/Users/AndyC/Dropbox/rdata/diab_scrape_us/results/urls/db_urls_",i,".csv")
-L2_urls<-as.character(read.delim(file=filepath,header=T,sep=",",stringsAsFactors =F)[,2])
-#Now visit the collected URLs one at a time and collect the posts
-
-#visit each of the urls in the collected list wiht for loop
-#each url represents 1 thread possibly wiht multiple pages
-for(pg2 in 1:length(L2_urls)){
+for(i in 1:41){#cycle through forum list
+  #filepath<-paste0("C:\\Users\\Andrew.Cox\\Dropbox\\rdata\\diab_scrape_us\\results\\urls\\db_urls_",i,".csv")
+  filepath<-paste0("/Users/AndyC/Dropbox/rdata/diab_scrape_us/results/urls/db_urls_",i,".csv")
+  L2_urls<-as.character(read.delim(file=filepath,header=T,sep=",",stringsAsFactors =F)[,2])
+  #Now visit the collected URLs one at a time and collect the posts
   
-#retrieve the first forum
-mst3<-html_session(L2_urls[pg2])
-#now extract to the first
-pgs<-mst3%>% html_nodes('#postpagestats_above') %>% html_text()
-pgs<-gsub("\n","",gsub("\r","",gsub("\t","",pgs)))
-last<-unlist(strsplit(pgs," "))
-last<-as.numeric(last)[!is.na(as.numeric(last))]
-t_pgs<-last[2]
-last1<-last[length(last)]
-###Here extract data from first page
-
-posts3<-data.frame(forum=character(),
-thread_no=numeric(),
-post_no=character(),
-username=character(),
-type=character(),
-location=character(),
-join_date=character(),
-block_data= character(),
-sign_block=character(),
-n_posts=character(),
-posts=character(),
-url=character())
-last_post<-1
-pst_pg<-1
-#loop through the pages of thread testing to see
-#when reach the last post number
-while(last1>last_post){
+  #visit each of the urls in the collected list wiht for loop
+  #each url represents 1 thread possibly wiht multiple pages
+  for(pg2 in 1:length(L2_urls)){#cycle through forums threads
+    
+    #retrieve the first forum
+    mst3<-html_session(L2_urls[pg2])
+    #now extract to the first
+    pgs<-mst3%>% html_nodes('#postpagestats_above') %>% html_text()
+    pgs<-gsub("\n","",gsub("\r","",gsub("\t","",pgs)))
+    last<-unlist(strsplit(pgs," "))
+    last<-as.numeric(last)[!is.na(as.numeric(last))]
+    t_pgs<-last[2]
+    last1<-last[length(last)]
+    ###Here extract data from first page
+    
+    posts3<-data.frame(forum=character(),
+                       thread_no=numeric(),
+                       post_no=character(),
+                       username=character(),
+                       type=character(),
+                       location=character(),
+                       join_date=character(),
+                       block_data= character(),
+                       sign_block=character(),
+                       n_posts=character(),
+                       posts=character(),
+                       url=character())
+    last_post<-1
+    pst_pg<-1
+    #loop through the pages of thread testing to see
+    #when reach the last post number
+    while(last1>last_post){
+      
+      url1<-paste0(substr(L2_urls[pg2],1,nchar(L2_urls[pg2])-1),"-",pst_pg)
+      pst_pg<-pst_pg+1
+      #retrieve the first forum
+      mst3<-html_session(url1)
+      pgs<-mst3%>% html_nodes('#postpagestats_above') %>% html_text()
+      pgs<-gsub("\n","",gsub("\r","",gsub("\t","",pgs)))
+      last<-unlist(strsplit(pgs," "))
+      suppressWarnings(last<-as.numeric(last)[!is.na(as.numeric(last))])
+      t_pgs<-last[2]
+      last1<-last[length(last)]
+      ################
+      #now scrape the data for hte fields available
+      type<-mst3%>% html_nodes('.usertitle') %>% html_text(trim=TRUE)
+      guest1<-sort(match("Guest",type))
+      username<-mst3%>% html_nodes('.onlinestatus') %>% html_attr('alt')
+      username<-gsub(" is offline","",username)
+      username<-gsub(" is online","",username)
+      #insert additional whre not usename is not picked up becasue is a guest
+      username1<-character(length(type))
+      username1[guest1]<-"Guest"
+      notguest1<-setdiff(1:length(type),guest1)
+      username1[notguest1]<-username
+      location<-mst3%>% html_nodes('dd:nth-child(4)') %>% html_text(trim=TRUE)
+      
+      #Need some code here to account for missing location 
+      #on the page when the location is missing the no posts moves up and appears in the 
+      #place where location whould be, need to detect this
+      suppressWarnings(numvals<-(!is.na(as.numeric(location)) | location=="> 100"))
+      #store those values
+      vals1<-c(location[which(numvals==T)])
+      valpos1<-which(numvals==T)
+      location[numvals==T]<-"No Location"
+      #insert additional whre not usename is not picked up becasue is a guest
+      location1<-character(length(type))
+      location1[guest1]<-"NA"
+      notguest1<-setdiff(1:length(type),guest1)
+      location1[notguest1]<-location
+      
+      forum<-mst3%>% html_nodes('.navbit~ .navbit+ .navbit a') %>% html_text(trim=TRUE)
+      thread_no<-pg2
+      post_no<-mst3%>% html_nodes('.postcounter') %>% html_text(trim=TRUE)
+      last_post<-max(as.numeric(gsub("#","",post_no)))
+      join_date<-mst3%>% html_nodes('dd:nth-child(2)') %>% html_text(trim=TRUE)
+      #insert additional whre not usename is not picked up becasue is a guest
+      join_date1<-character(length(type))
+      join_date1[guest1]<-"NA"
+      notguest1<-setdiff(1:length(type),guest1)
+      join_date1[notguest1]<-join_date
+      
+      
+      
+      n_posts<-mst3%>% html_nodes('dd:nth-child(6)') %>% html_text(trim=TRUE)
+      n_posts1<-character(length(username1))
+      n_posts1[valpos1]<-vals1
+      ins<-1
+      for(k in 1:length(username1)){
+        
+        if(n_posts1[k]==""){
+          n_posts1[k]<-n_posts[ins]
+          ins<-ins+1
+        }}
+      # #insert additional whre not usename is not picked up becasue is a guest
+      # n_posts2<-character(length(type))
+      # n_posts2[guest1]<-"NA"
+      # notguest1<-setdiff(1:length(type),guest1)
+      # n_posts2[notguest1]<-n_posts1
+      
+      block_data<-mst3%>% html_nodes('.username_container') %>% html_text(trim=TRUE)
+      block_data<-gsub("\n","",gsub("\r","",gsub("\t","",block_data)))
+      #sign_block<-mst3%>% html_nodes('.signaturecontainer') %>% html_text(trim=TRUE)
+      post1<-mst3%>% html_nodes('.postbody') %>% html_text(trim=TRUE)
+      posts<-gsub("\n","",gsub("\r","",gsub("\t","",post1)))
+      posts2<-data.frame(rep(forum,length(post_no)),rep(thread_no,length(post_no)),
+                         post_no,username1,type,location1,join_date1,block_data,n_posts1,posts,url1)
+      posts3<-rbind(posts3,posts2)
+      ################
+      
+      Sys.sleep(0.25)
+      last_post<-last_post+1
+      print(paste0("    ",round((last_post/last1)*100,0)," % of this thread pages complete"))
+    }#While loop (last_post1) close for the pages on one thread
+    print(paste0("  ",round((pg2/length(L2_urls))*100,0)," % of this forum threads complete"))
+  }#pg2 cycle thropugh forum threads
+  #filepath1<-paste0("C:\\Users\\Andrew.Cox\\Dropbox\\rdata\\diab_scrape_us\\results\\posts\\DBpostss_",i,".csv")
+  filepath1<-paste0("/Users/AndyC/Dropbox/rdata/diab_scrape_us/results/posts/DBpostss_",i,".csv")
   
-  url1<-paste0(substr(L2_urls[pg2],1,nchar(L2_urls[pg2])-1),"-",pst_pg)
-  pst_pg<-pst_pg+1
-  #retrieve the first forum
-  mst3<-html_session(url1)
-  pgs<-mst3%>% html_nodes('#postpagestats_above') %>% html_text()
-  pgs<-gsub("\n","",gsub("\r","",gsub("\t","",pgs)))
-  last<-unlist(strsplit(pgs," "))
-  suppressWarnings(last<-as.numeric(last)[!is.na(as.numeric(last))])
-  t_pgs<-last[2]
-  last1<-last[length(last)]
-################
-#now scrape the data for hte fields available
-type<-mst3%>% html_nodes('.usertitle') %>% html_text(trim=TRUE)
-guest1<-sort(match("Guest",type))
-username<-mst3%>% html_nodes('.onlinestatus') %>% html_attr('alt')
-username<-gsub(" is offline","",username)
-username<-gsub(" is online","",username)
-#insert additional whre not usename is not picked up becasue is a guest
-username1<-character(length(type))
-username1[guest1]<-"Guest"
-notguest1<-setdiff(1:length(type),guest1)
-username1[notguest1]<-username
-location<-mst3%>% html_nodes('dd:nth-child(4)') %>% html_text(trim=TRUE)
-
-#Need some code here to account for missing location 
-#on the page when the location is missing the no posts moves up and appears in the 
-#place where location whould be, need to detect this
-suppressWarnings(numvals<-(!is.na(as.numeric(location)) | location=="> 100"))
-#store those values
-vals1<-c(location[which(numvals==T)])
-valpos1<-which(numvals==T)
-location[numvals==T]<-"No Location"
-#insert additional whre not usename is not picked up becasue is a guest
-location1<-character(length(type))
-location1[guest1]<-"NA"
-notguest1<-setdiff(1:length(type),guest1)
-location1[notguest1]<-location
-
-
-forum<-mst3%>% html_nodes('.navbit~ .navbit+ .navbit a') %>% html_text(trim=TRUE)
-thread_no<-pg2
-post_no<-mst3%>% html_nodes('.postcounter') %>% html_text(trim=TRUE)
-last_post<-max(as.numeric(gsub("#","",post_no)))
-join_date<-mst3%>% html_nodes('dd:nth-child(2)') %>% html_text(trim=TRUE)
-#insert additional whre not usename is not picked up becasue is a guest
-join_date1<-character(length(type))
-join_date1[guest1]<-"NA"
-notguest1<-setdiff(1:length(type),guest1)
-join_date1[notguest1]<-join_date
-
-
-
-n_posts<-mst3%>% html_nodes('dd:nth-child(6)') %>% html_text(trim=TRUE)
-n_posts1<-character(length(username1))
-n_posts1[valpos1]<-vals1
-ins<-1
-for(k in 1:length(username1)){
-  
-  if(n_posts1[k]==""){
-    n_posts1[k]<-n_posts[ins]
-    ins<-ins+1
-}}
-# #insert additional whre not usename is not picked up becasue is a guest
-# n_posts2<-character(length(type))
-# n_posts2[guest1]<-"NA"
-# notguest1<-setdiff(1:length(type),guest1)
-# n_posts2[notguest1]<-n_posts1
-
-block_data<-mst3%>% html_nodes('.username_container') %>% html_text(trim=TRUE)
-block_data<-gsub("\n","",gsub("\r","",gsub("\t","",block_data)))
-#sign_block<-mst3%>% html_nodes('.signaturecontainer') %>% html_text(trim=TRUE)
-post1<-mst3%>% html_nodes('.postbody') %>% html_text(trim=TRUE)
-posts<-gsub("\n","",gsub("\r","",gsub("\t","",post1)))
-posts2<-data.frame(rep(forum,length(post_no)),rep(thread_no,length(post_no)),
-                   post_no,username1,type,location1,join_date1,block_data,n_posts1,posts,url1)
-posts3<-rbind(posts3,posts2)
-################
-
-Sys.sleep(0.25)
-last_post<-last_post+1
-print(paste0(round((last_post/last1)*100,0)," % complete"))
-}
-##########}
-#filepath1<-paste0("C:\\Users\\Andrew.Cox\\Dropbox\\rdata\\diab_scrape_us\\results\\posts\\DBpostss_",i,".csv")
-filepath1<-paste0("/Users/AndyC/Dropbox/rdata/diab_scrape_us/results/posts/DBpostss_",i,".csv")
-
-write.table(posts3, file = filepath1, sep = ",", col.names = NA, na="NA", qmethod = "double")
-print(paste0(round((i/80)*100,0)," % complete overall"))
-}
+  write.table(posts3, file = filepath1, sep = ",", col.names = NA, na="NA", qmethod = "double")
+  print(paste0(round((i/80)*100,0)," % forums complete overall"))
 }#i loop
-
