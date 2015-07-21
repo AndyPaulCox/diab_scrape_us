@@ -6,6 +6,14 @@ rm(list = ls())
 library(rvest)
 library(pipeR)
 ################################
+test_link<-function(ssion,lnk){
+  t1<-NULL
+  try(t1<-follow_link(ssion,lnk))
+  if(is.null(t1))rt<-FALSE else rt<-TRUE
+  return(rt)
+}
+##################################
+################################
 ###########################################
 #########List of Level one urls (the sub-forums)
 L1_urls<-c(
@@ -56,12 +64,13 @@ L1_urls<-c(
 #"http://www.diabetesdaily.com/forum/announcements/",
 #"http://www.diabetesdaily.com/forum/diabetes-news/",
 
+filt<-"?pp=15&daysprune=-1&sort=dateline&order=desc"
 
 
-for(i in 1:length(L1_urls)){
+for(i in 38:length(L1_urls)){
   
   #retrieve the first forum
-  mst<-html_session(L1_urls[i])
+  mst<-html_session(paste0(L1_urls[i],filt))
   #now extract to the first
   L2_urls<-mst%>% html_nodes('.title') %>% html_attr("href") 
   
@@ -73,7 +82,7 @@ for(i in 1:length(L1_urls)){
   #for(pg in 2:last){
   pg=2
   while(pg<=last){
-    url1<-paste0(L1_urls[i],"index",pg)
+    url1<-paste0(L1_urls[i],"index",pg,filt)
     #retrieve the first forum
     mst<-html_session(url1)
     #now extract to the first
@@ -83,7 +92,7 @@ for(i in 1:length(L1_urls)){
     pg<-pg+length(L2_temp)
   }
   print(i/length(L1_urls))
-  outpath<-paste0("C:\\Users\\Andrew.Cox\\Dropbox\\rdata\\diab_scrape_us\\results\\urls\\db_urls_",i,".csv")
+  outpath<-paste0("db_urls_",i,".csv")
   #write.table(L2_urls, file = "/Users/AndyC/Dropbox/rdata/diab_scrape_us/db_urls.csv", sep = ",", col.names = NA, na="NA", qmethod = "double")
   write.table(L2_urls, file = outpath, sep = ",", col.names = NA, na="NA", qmethod = "double")
 }
@@ -91,24 +100,51 @@ for(i in 1:length(L1_urls)){
 
 ##############################################################################################
 ##############################################################################################
-##############################################################################################
-##############################################################################################
-rm(list = ls())
+####################################################################
+options(stringsAsFactors = FALSE)
+
+
 library(rvest)
 library(pipeR)
 
-for(i in 1:41){#cycle through forum list
-  #filepath<-paste0("C:\\Users\\Andrew.Cox\\Dropbox\\rdata\\diab_scrape_us\\results\\urls\\db_urls_",i,".csv")
-  filepath<-paste0("/Users/AndyC/Dropbox/rdata/diab_scrape_us/results/urls/db_urls_",i,".csv")
+for(i in 38:41){#cycle through forum list
+  skip136<-skip164<-0
+  filepath<-paste0("/home/andy/rdata/diabetesUS/urls/db_urls_",i,".csv")
+  #filepath<-paste0("/Users/AndyC/Dropbox/rdata/diab_scrape_us/results/urls/db_urls_",i,".csv")
   L2_urls<-as.character(read.delim(file=filepath,header=T,sep=",",stringsAsFactors =F)[,2])
   #Now visit the collected URLs one at a time and collect the posts
-  
+  if(length(grep("showthread.php",L2_urls))>0)L2_urls<-L2_urls[-grep("showthread.php",L2_urls)]
+  posts3<-data.frame(forum=character(),
+                     thread_no=numeric(),
+                     post_no=character(),
+                     username=character(),
+                     type=character(),
+                     location=character(),
+                     join_date=character(),
+                     block_data= character(),
+                     sign_block=character(),
+                     n_posts=character(),
+                     posts=character(),
+                     url=character())
   #visit each of the urls in the collected list wiht for loop
   #each url represents 1 thread possibly wiht multiple pages
   for(pg2 in 1:length(L2_urls)){#cycle through forums threads
     
     #retrieve the first forum
-    mst3<-html_session(L2_urls[pg2])
+    mst3<-try(html_session(L2_urls[pg2]))
+    tries1<-1
+    while (class(mst3)[1] == "try-error"){
+      print("Retry")
+      Sys.sleep(10)
+      mst3 <- try(html_session(url1))
+      if(tries1>5)break
+      tries1<-tries1+1
+    }
+    # Do we get a valid response to the url, if not go to next
+    if(mst3$response$status_code<200 | mst3$response$status_code>=300){
+      next()
+      skip136<-skip136+1
+    }
     #now extract to the first
     pgs<-mst3%>% html_nodes('#postpagestats_above') %>% html_text()
     pgs<-gsub("\n","",gsub("\r","",gsub("\t","",pgs)))
@@ -118,30 +154,36 @@ for(i in 1:41){#cycle through forum list
     last1<-last[length(last)]
     ###Here extract data from first page
     
-    posts3<-data.frame(forum=character(),
-                       thread_no=numeric(),
-                       post_no=character(),
-                       username=character(),
-                       type=character(),
-                       location=character(),
-                       join_date=character(),
-                       block_data= character(),
-                       sign_block=character(),
-                       n_posts=character(),
-                       posts=character(),
-                       url=character())
+    
     last_post<-1
     pst_pg<-1
     #loop through the pages of thread testing to see
+    if(length(last1)==0)last1=last_post
     #when reach the last post number
-    while(last1>last_post){
+    while(last1>=last_post){#last1 is total no posts: last_post was last post indexed
       
       url1<-paste0(substr(L2_urls[pg2],1,nchar(L2_urls[pg2])-1),"-",pst_pg)
       pst_pg<-pst_pg+1
       #retrieve the first forum
-      mst3<-html_session(url1)
+      
+      mst3<-try(html_session(url1))
+      tries1<-1
+      while (class(mst3)[1] == "try-error"){
+        print("Retry")
+        Sys.sleep(10)
+        mst3 <- try(html_session(url1))
+        if(tries1>5)break
+        tries1<-tries1+1
+      }
+      # Do we get a valid response to the url, if not go to next
+      if(mst3$response$status_code<200 | mst3$response$status_code>=300){
+        break
+        skip164<-skip164+1
+      }
+      
       pgs<-mst3%>% html_nodes('#postpagestats_above') %>% html_text()
       pgs<-gsub("\n","",gsub("\r","",gsub("\t","",pgs)))
+      
       last<-unlist(strsplit(pgs," "))
       suppressWarnings(last<-as.numeric(last)[!is.na(as.numeric(last))])
       t_pgs<-last[2]
@@ -177,15 +219,15 @@ for(i in 1:41){#cycle through forum list
       forum<-mst3%>% html_nodes('.navbit~ .navbit+ .navbit a') %>% html_text(trim=TRUE)
       thread_no<-pg2
       post_no<-mst3%>% html_nodes('.postcounter') %>% html_text(trim=TRUE)
+      
       last_post<-max(as.numeric(gsub("#","",post_no)))
+      
       join_date<-mst3%>% html_nodes('dd:nth-child(2)') %>% html_text(trim=TRUE)
       #insert additional whre not usename is not picked up becasue is a guest
       join_date1<-character(length(type))
       join_date1[guest1]<-"NA"
       notguest1<-setdiff(1:length(type),guest1)
       join_date1[notguest1]<-join_date
-      
-      
       
       n_posts<-mst3%>% html_nodes('dd:nth-child(6)') %>% html_text(trim=TRUE)
       n_posts1<-character(length(username1))
@@ -214,13 +256,15 @@ for(i in 1:41){#cycle through forum list
       ################
       
       Sys.sleep(0.25)
+      
       last_post<-last_post+1
       print(paste0("    ",round((last_post/last1)*100,0)," % of this thread pages complete"))
+      
     }#While loop (last_post1) close for the pages on one thread
-    print(paste0("  ",round((pg2/length(L2_urls))*100,0)," % of this forum threads complete"))
+    print(paste0("  ",round((pg2/length(L2_urls))*100,0)," % of this forum threads complete")) 
+    print(paste0("skip136= ",skip136,"  Skip164= ",skip164))
   }#pg2 cycle thropugh forum threads
-  #filepath1<-paste0("C:\\Users\\Andrew.Cox\\Dropbox\\rdata\\diab_scrape_us\\results\\posts\\DBpostss_",i,".csv")
-  filepath1<-paste0("/Users/AndyC/Dropbox/rdata/diab_scrape_us/results/posts/DBpostss_",i,".csv")
+  filepath1<-paste0("/home/andy/rdata/diabetesUS/posts/DBpostss_i",i,"_pg",pg2,"_pt1.csv")
   
   write.table(posts3, file = filepath1, sep = ",", col.names = NA, na="NA", qmethod = "double")
   print(paste0(round((i/80)*100,0)," % forums complete overall"))
